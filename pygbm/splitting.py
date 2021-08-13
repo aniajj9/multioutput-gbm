@@ -6,7 +6,8 @@
   into the newly created left and right childs.
 """
 import numpy as np
-from numba import njit, jitclass, prange, float32, uint8, uint32
+from numba import njit, prange, float32, uint8, uint32
+from numba.experimental import jitclass
 import numba
 
 from .histogram import _build_histogram
@@ -168,10 +169,10 @@ class SplittingContext:
         self.right_indices_buffer = np.empty_like(self.partition)
 
 
-@njit(parallel=True,
-      locals={'sample_idx': uint32,
-              'left_count': uint32,
-              'right_count': uint32})
+# @njit(parallel=True,
+#       locals={'sample_idx': uint32,
+#               'left_count': uint32,
+#               'right_count': uint32})
 def split_indices(context, split_info, sample_indices):
     """Split samples into left and right arrays.
 

@@ -7,7 +7,7 @@ from pygbm import GradientBoostingRegressor
 
 
 def test_atp1d():
-    df = pd.read_csv('atp1d.csv')
+    df = pd.read_csv('../tests/datasets/atp1d.csv')
     target = df.loc[:, df.columns.str.startswith('LBL')]
     df.drop(target.columns, axis=1, inplace=True)
     df, target = df.to_numpy(), target.to_numpy()

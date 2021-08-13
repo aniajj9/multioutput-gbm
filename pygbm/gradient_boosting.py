@@ -14,7 +14,7 @@ from sklearn.utils.multiclass import check_classification_targets
 from sklearn.metrics import check_scoring
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-
+from copy import copy
 from pygbm.binning import BinMapper
 from pygbm.grower import TreeGrower
 from pygbm.loss import _LOSSES
@@ -247,7 +247,11 @@ class BaseGradientBoostingMachine(BaseEstimator, ABC):
             else:
                 proj_gradients, proj_hessians = gradients.ravel(), hessians.ravel()
 
+            m = 0
+            h = copy(raw_predictions)
             # Build `n_trees_per_iteration` trees.
+            step_size = 1
+            momentum = 1
             for k, (gradients_at_k, hessians_at_k) in enumerate(zip(
                     np.array_split(proj_gradients, self.n_trees_per_iteration_),
                     np.array_split(proj_hessians, self.n_trees_per_iteration_))):
@@ -255,7 +259,8 @@ class BaseGradientBoostingMachine(BaseEstimator, ABC):
                 # Note that for binary classif and regressions,
                 # n_trees_per_iteration is 1 and xxxx_at_k is equivalent to the
                 # whole array.
-
+                tetha = 2/(m+2)
+                linear_fog = (1 - tetha) * raw_predictions + tetha * h
                 grower = TreeGrower(
                     X_binned_train, gradients_at_k, hessians_at_k,
                     max_bins=self.max_bins,
@@ -277,7 +282,6 @@ class BaseGradientBoostingMachine(BaseEstimator, ABC):
 
                 acc_apply_split_time += grower.total_apply_split_time
                 acc_find_split_time += grower.total_find_split_time
-
                 predictor = grower.make_predictor(numerical_thresholds)
                 predictors[-1].append(predictor)
 
@@ -289,6 +293,8 @@ class BaseGradientBoostingMachine(BaseEstimator, ABC):
                 _update_raw_predictions(leaves_data, raw_predictions)
                 toc_pred = time()
                 acc_prediction_time += toc_pred - tic_pred
+
+                m += 1
 
             should_early_stop = False
             if do_early_stopping:
@@ -323,6 +329,7 @@ class BaseGradientBoostingMachine(BaseEstimator, ABC):
 
         self.train_scores_ = np.asarray(self.train_scores_)
         self.validation_scores_ = np.asarray(self.validation_scores_)
+
         return self
 
     def _check_early_stopping(self, X_binned_train, y_train,
